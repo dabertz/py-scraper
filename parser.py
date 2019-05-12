@@ -3,27 +3,29 @@ import requests
 import urllib.parse as urlparse
 from time import sleep
 from elasticsearch import Elasticsearch
+import numpy as np
 
 es = Elasticsearch([{'host': 'localhost', 'port': '9200'}])
 
 class AmazonScraper:
 
     USER_AGENTS = [
-        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.79 Safari/537.36',
-        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.14; rv:64.0) Gecko/20100101 Firefox/64.0'
+        'Mozilla/5.0 (Windows NT 6.3; Win64, x64; Trident/7.0; rv:11.0) like Gecko',
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.14; rv:64.0) Gecko/20100101 Firefox/64.0',
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36'
     ]
 
     BASE_URL = 'https://www.amazon.co.jp'
 
     products = []
-    current_agent = 0
+    current_agent = 1
     MAX_TRIAL_REQUEST = 3
 
     def __init__(self, url):
 
         if es.ping():
             self.parse_search_result(url)
-            # self.parse_product_page("B07HCH6GHQ", None)
+            print("Total Items:", len(self.products))
         else:
             print("Elasticsearch is not connected")
         
@@ -124,22 +126,26 @@ class AmazonScraper:
                     'price': price_range ,
                     'image_url' : image_url
                 }
-
                 self._save_product(asin, data)
                 self.products.append(asin)
                 break
             except Exception as e:
                 print(e)
 
-            # Try after 2 second
-            sleep(2)
+            # Random delay
+            delays = [1, 4, 5, 2, 3, 3]
+            delay = np.random.choice(delays)
+            sleep(delay)
 
     def _get_headers(self):
-        self.current_agent = 1 if self.current_agent == 0 else 1
+        agent = np.random.choice(self.USER_AGENTS)
         headers = {
-            'User-Agent': self.USER_AGENTS[self.current_agent],
-            'Accept': 'text/html,application/xhtml+xml,\
-                        application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8'
+            'User-Agent': agent,
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Host': 'www.amazon.co.jp',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Pragma': 'no-cache'
         }
         return headers
 
